@@ -13,6 +13,28 @@
     </header>
 
     <main>
+      <section id="auth-container">
+        <h3>Account Access</h3>
+        <div id="auth-status" class="info-banner">Checking session...</div>
+
+        <form id="login-form">
+          <div class="form-group">
+            <label for="login-email">Email:</label>
+            <input type="email" id="login-email" required placeholder="teacher@mergington.edu" />
+          </div>
+          <div class="form-group">
+            <label for="login-password">Password:</label>
+            <input type="password" id="login-password" required placeholder="Enter password" />
+          </div>
+          <button type="submit">Log In</button>
+        </form>
+
+        <div id="account-panel" class="hidden">
+          <p id="current-user-details"></p>
+          <button id="logout-button" type="button">Log Out</button>
+        </div>
+      </section>
+
       <section id="activities-container">
         <h3>Available Activities</h3>
         <div id="activities-list">
@@ -23,6 +45,9 @@
 
       <section id="signup-container">
         <h3>Sign Up for an Activity</h3>
+        <p id="signup-help" class="helper-text">
+          Log in to register or unregister students. Student accounts can only manage their own enrollment.
+        </p>
         <form id="signup-form">
           <div class="form-group">
             <label for="email">Student Email:</label>

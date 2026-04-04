@@ -5,14 +5,16 @@ A super simple FastAPI application that allows students to view and sign up for 
 ## Features
 
 - View all available extracurricular activities
+- Log in with role-based access control
 - Sign up for activities
+- Unregister students with permission checks
 
 ## Getting Started
 
 1. Install the dependencies:
 
    ```
-   pip install fastapi uvicorn
+   pip install -r ../requirements.txt
    ```
 
 2. Run the application:
@@ -29,8 +31,29 @@ A super simple FastAPI application that allows students to view and sign up for 
 
 | Method | Endpoint                                                          | Description                                                         |
 | ------ | ----------------------------------------------------------------- | ------------------------------------------------------------------- |
+| GET    | `/auth/me`                                                        | Get the current authenticated user                                  |
+| POST   | `/auth/login`                                                     | Log in and receive a session cookie                                 |
+| POST   | `/auth/logout`                                                    | Log out and clear the session cookie                                |
 | GET    | `/activities`                                                     | Get all activities with their details and current participant count |
-| POST   | `/activities/{activity_name}/signup?email=student@mergington.edu` | Sign up for an activity                                             |
+| POST   | `/activities/{activity_name}/signup`                              | Sign up a student for an activity                                   |
+| DELETE | `/activities/{activity_name}/unregister?email=student@...`        | Unregister a student from an activity                               |
+
+## Role Model
+
+- `student`: can sign up and unregister only their own email address.
+- `club_leader`: can manage registrations for any student.
+- `admin`: can manage registrations for any student.
+
+Protected write actions return `401` when not logged in and `403` when the signed-in user does not have permission for the requested student email.
+
+## Sample Accounts
+
+These accounts are stored in [src/users.json](users.json):
+
+- `teacher@mergington.edu` / `teacher123` (`admin`)
+- `advisor@mergington.edu` / `leader123` (`club_leader`)
+- `emma@mergington.edu` / `student123` (`student`)
+- `olivia@mergington.edu` / `student123` (`student`)
 
 ## Data Model
 
@@ -47,4 +70,10 @@ The application uses a simple data model with meaningful identifiers:
    - Name
    - Grade level
 
-All data is stored in memory, which means data will be reset when the server restarts.
+3. **Users** - Stored in `users.json`:
+   - Name
+   - Email
+   - Password
+   - Role
+
+Activity registrations and login sessions are still stored in memory, which means they reset when the server restarts.

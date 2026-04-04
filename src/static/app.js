@@ -2,18 +2,112 @@ document.addEventListener("DOMContentLoaded", () => {
   const activitiesList = document.getElementById("activities-list");
   const activitySelect = document.getElementById("activity");
   const signupForm = document.getElementById("signup-form");
+  const loginForm = document.getElementById("login-form");
+  const logoutButton = document.getElementById("logout-button");
   const messageDiv = document.getElementById("message");
+  const authStatus = document.getElementById("auth-status");
+  const accountPanel = document.getElementById("account-panel");
+  const currentUserDetails = document.getElementById("current-user-details");
+  const emailInput = document.getElementById("email");
+  const signupHelp = document.getElementById("signup-help");
 
-  // Function to fetch activities from API
+  const state = {
+    currentUser: null,
+  };
+
+  function showMessage(text, type) {
+    messageDiv.textContent = text;
+    messageDiv.className = `${type} message-visible`;
+  }
+
+  function clearMessage() {
+    messageDiv.textContent = "";
+    messageDiv.className = "hidden";
+  }
+
+  function canManageOtherStudents() {
+    return ["admin", "club_leader"].includes(state.currentUser?.role);
+  }
+
+  function canManageEmail(email) {
+    if (!state.currentUser) {
+      return false;
+    }
+
+    return canManageOtherStudents() || state.currentUser.email === email;
+  }
+
+  function updateAuthUI() {
+    if (state.currentUser) {
+      authStatus.textContent = `Signed in as ${state.currentUser.name}`;
+      loginForm.classList.add("hidden");
+      accountPanel.classList.remove("hidden");
+      currentUserDetails.innerHTML = `
+        <strong>${state.currentUser.email}</strong><br />
+        <span class="role-chip">${state.currentUser.role.replace("_", " ")}</span>
+      `;
+      signupHelp.textContent = canManageOtherStudents()
+        ? "You can register or unregister any student while signed in with an elevated role."
+        : "You can only register or unregister your own student account.";
+      signupForm.querySelector("button[type='submit']").disabled = false;
+
+      if (canManageOtherStudents()) {
+        emailInput.disabled = false;
+        emailInput.value = "";
+        emailInput.placeholder = "student@mergington.edu";
+      } else {
+        emailInput.disabled = true;
+        emailInput.value = state.currentUser.email;
+      }
+    } else {
+      authStatus.textContent = "No active session. Log in to manage registrations.";
+      loginForm.classList.remove("hidden");
+      accountPanel.classList.add("hidden");
+      signupHelp.textContent = "Log in to register or unregister students. Student accounts can only manage their own enrollment.";
+      signupForm.querySelector("button[type='submit']").disabled = true;
+      emailInput.disabled = true;
+      emailInput.value = "";
+      emailInput.placeholder = "your-email@mergington.edu";
+    }
+  }
+
+  async function refreshCurrentUser() {
+    const response = await fetch("/auth/me");
+    const result = await response.json();
+    state.currentUser = result.authenticated ? result.user : null;
+    updateAuthUI();
+  }
+
+  function renderParticipants(activityName, participants) {
+    if (participants.length === 0) {
+      return "<p><em>No participants yet</em></p>";
+    }
+
+    return `
+      <div class="participants-section">
+        <h5>Participants:</h5>
+        <ul class="participants-list">
+          ${participants
+            .map((email) => {
+              const actionButton = canManageEmail(email)
+                ? `<button class="delete-btn" data-activity="${activityName}" data-email="${email}">Remove</button>`
+                : "";
+
+              return `<li><span class="participant-email">${email}</span>${actionButton}</li>`;
+            })
+            .join("")}
+        </ul>
+      </div>`;
+  }
+
   async function fetchActivities() {
     try {
       const response = await fetch("/activities");
       const activities = await response.json();
 
-      // Clear loading message
       activitiesList.innerHTML = "";
+      activitySelect.innerHTML = '<option value="">-- Select an activity --</option>';
 
-      // Populate activities list
       Object.entries(activities).forEach(([name, details]) => {
         const activityCard = document.createElement("div");
         activityCard.className = "activity-card";
@@ -21,42 +115,26 @@ document.addEventListener("DOMContentLoaded", () => {
         const spotsLeft =
           details.max_participants - details.participants.length;
 
-        // Create participants HTML with delete icons instead of bullet points
-        const participantsHTML =
-          details.participants.length > 0
-            ? `<div class="participants-section">
-              <h5>Participants:</h5>
-              <ul class="participants-list">
-                ${details.participants
-                  .map(
-                    (email) =>
-                      `<li><span class="participant-email">${email}</span><button class="delete-btn" data-activity="${name}" data-email="${email}">❌</button></li>`
-                  )
-                  .join("")}
-              </ul>
-            </div>`
-            : `<p><em>No participants yet</em></p>`;
-
         activityCard.innerHTML = `
-          <h4>${name}</h4>
+          <div class="activity-card-header">
+            <h4>${name}</h4>
+            <span>${spotsLeft} spots left</span>
+          </div>
           <p>${details.description}</p>
           <p><strong>Schedule:</strong> ${details.schedule}</p>
-          <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
           <div class="participants-container">
-            ${participantsHTML}
+            ${renderParticipants(name, details.participants)}
           </div>
         `;
 
         activitiesList.appendChild(activityCard);
 
-        // Add option to select dropdown
         const option = document.createElement("option");
         option.value = name;
         option.textContent = name;
         activitySelect.appendChild(option);
       });
 
-      // Add event listeners to delete buttons
       document.querySelectorAll(".delete-btn").forEach((button) => {
         button.addEventListener("click", handleUnregister);
       });
@@ -67,7 +145,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Handle unregister functionality
   async function handleUnregister(event) {
     const button = event.target;
     const activity = button.getAttribute("data-activity");
@@ -86,75 +163,106 @@ document.addEventListener("DOMContentLoaded", () => {
       const result = await response.json();
 
       if (response.ok) {
-        messageDiv.textContent = result.message;
-        messageDiv.className = "success";
-
-        // Refresh activities list to show updated participants
+        showMessage(result.message, "success");
         fetchActivities();
       } else {
-        messageDiv.textContent = result.detail || "An error occurred";
-        messageDiv.className = "error";
+        showMessage(result.detail || "An error occurred", "error");
       }
-
-      messageDiv.classList.remove("hidden");
-
-      // Hide message after 5 seconds
-      setTimeout(() => {
-        messageDiv.classList.add("hidden");
-      }, 5000);
     } catch (error) {
-      messageDiv.textContent = "Failed to unregister. Please try again.";
-      messageDiv.className = "error";
-      messageDiv.classList.remove("hidden");
+      showMessage("Failed to unregister. Please try again.", "error");
       console.error("Error unregistering:", error);
     }
   }
 
-  // Handle form submission
+  loginForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const email = document.getElementById("login-email").value;
+    const password = document.getElementById("login-password").value;
+
+    try {
+      const response = await fetch("/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
+      const result = await response.json();
+
+      if (response.ok) {
+        state.currentUser = result.user;
+        loginForm.reset();
+        updateAuthUI();
+        fetchActivities();
+        showMessage(result.message, "success");
+      } else {
+        showMessage(result.detail || "Login failed", "error");
+      }
+    } catch (error) {
+      showMessage("Failed to log in. Please try again.", "error");
+      console.error("Error logging in:", error);
+    }
+  });
+
+  logoutButton.addEventListener("click", async () => {
+    try {
+      const response = await fetch("/auth/logout", {
+        method: "POST",
+      });
+      const result = await response.json();
+
+      if (response.ok) {
+        state.currentUser = null;
+        clearMessage();
+        updateAuthUI();
+        fetchActivities();
+        showMessage(result.message, "info");
+      } else {
+        showMessage(result.detail || "Logout failed", "error");
+      }
+    } catch (error) {
+      showMessage("Failed to log out. Please try again.", "error");
+      console.error("Error logging out:", error);
+    }
+  });
+
   signupForm.addEventListener("submit", async (event) => {
     event.preventDefault();
 
-    const email = document.getElementById("email").value;
+    const email = emailInput.value;
     const activity = document.getElementById("activity").value;
 
     try {
-      const response = await fetch(
-        `/activities/${encodeURIComponent(
-          activity
-        )}/signup?email=${encodeURIComponent(email)}`,
-        {
-          method: "POST",
-        }
-      );
+      const response = await fetch(`/activities/${encodeURIComponent(activity)}/signup`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      });
 
       const result = await response.json();
 
       if (response.ok) {
-        messageDiv.textContent = result.message;
-        messageDiv.className = "success";
-        signupForm.reset();
-
-        // Refresh activities list to show updated participants
+        showMessage(result.message, "success");
+        if (canManageOtherStudents()) {
+          signupForm.reset();
+        }
         fetchActivities();
       } else {
-        messageDiv.textContent = result.detail || "An error occurred";
-        messageDiv.className = "error";
+        showMessage(result.detail || "An error occurred", "error");
       }
-
-      messageDiv.classList.remove("hidden");
-
-      // Hide message after 5 seconds
-      setTimeout(() => {
-        messageDiv.classList.add("hidden");
-      }, 5000);
     } catch (error) {
-      messageDiv.textContent = "Failed to sign up. Please try again.";
-      messageDiv.className = "error";
-      messageDiv.classList.remove("hidden");
+      showMessage("Failed to sign up. Please try again.", "error");
       console.error("Error signing up:", error);
     }
   });
 
-  // Initialize app
-  fetchActivities();
+  async function initializeApp() {
+    await refreshCurrentUser();
+    await fetchActivities();
+  }
+
+  initializeApp();
 });
