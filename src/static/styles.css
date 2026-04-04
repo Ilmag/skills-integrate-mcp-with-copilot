@@ -33,11 +33,12 @@ main {
   flex-wrap: wrap;
   gap: 30px;
   justify-content: center;
+  align-items: flex-start;
 }
 
 @media (min-width: 768px) {
   main {
-    grid-template-columns: 2fr 1fr;
+    justify-content: space-between;
   }
 }
 
@@ -48,6 +49,10 @@ section {
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
   width: 100%;
   max-width: 500px;
+}
+
+#activities-container {
+  max-width: 640px;
 }
 
 section h3 {
@@ -72,6 +77,25 @@ section h3 {
 
 .activity-card p {
   margin-bottom: 8px;
+}
+
+.activity-card-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.role-chip {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background-color: #e8eaf6;
+  color: #283593;
+  font-size: 13px;
+  font-weight: bold;
+  text-transform: capitalize;
 }
 
 /* New styles for participants section */
@@ -125,9 +149,28 @@ section h3 {
   background-color: #ffebee;
 }
 
+.delete-btn:disabled,
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 .participants-section p {
   color: #777;
   font-style: italic;
+}
+
+.info-banner,
+.helper-text {
+  margin-bottom: 15px;
+  padding: 10px 12px;
+  border-radius: 4px;
+  background-color: #e8eaf6;
+  color: #283593;
+}
+
+#current-user-details {
+  margin-bottom: 12px;
 }
 
 .form-group {
@@ -190,6 +233,12 @@ button:hover {
 
 .hidden {
   display: none;
+}
+
+.message-visible {
+  margin-top: 20px;
+  padding: 10px;
+  border-radius: 4px;
 }
 
 footer {

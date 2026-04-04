@@ -1,0 +1,28 @@
+{
+  "users": [
+    {
+      "email": "teacher@mergington.edu",
+      "name": "Ms. Carter",
+      "password": "teacher123",
+      "role": "admin"
+    },
+    {
+      "email": "advisor@mergington.edu",
+      "name": "Mr. Rivera",
+      "password": "leader123",
+      "role": "club_leader"
+    },
+    {
+      "email": "emma@mergington.edu",
+      "name": "Emma Johnson",
+      "password": "student123",
+      "role": "student"
+    },
+    {
+      "email": "olivia@mergington.edu",
+      "name": "Olivia Smith",
+      "password": "student123",
+      "role": "student"
+    }
+  ]
+}
